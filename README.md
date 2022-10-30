@@ -1,4 +1,4 @@
-<h1>Automations</h1>
+<h1>🤖 Automations</h1>
 
 __Automations! make ur work easier__
 
@@ -7,5 +7,9 @@ __Automations! make ur work easier__
 <a href="">web status checker</a>
 
 sends email when your web fails. 
+
+:robot
+
+;car
 
 
