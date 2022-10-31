@@ -31,6 +31,7 @@ import ssl
 #time cal
 import datetime
 import time
+
 from credientials import Credientials
 
 ssl._create_default_https_context = ssl._create_unverified_context #skip ssl certificate verification
@@ -38,18 +39,20 @@ account  = Credientials()
 sender_address =  account.uid
 sender_pass = account.pw
 
-WhenMailLastSent = None
+past = datetime.datetime.now() - datetime.timedelta(days=1)
+
+WhenMailLastSent = past
 status = None 
-ContinousON = [None, None]
-ContinousOFF = [None, None] 
+ContinousON = [past, past]
+ContinousOFF = [past, past] 
 
 #customable
-address = 'https://www.obaksago.com:8443'
+address = 'https://www.obaksago.com'
 receiver  = 'geulligu89@naver.com'
 term = 30 #sec
 mail_term_when_down = 10 #min
 sendEveryday = True
-sendEveryweek = True
+sendEveryweek = False
 
 #이메일 보내는 함수 / void
 def SendGmail(receiver, title, content): 
@@ -83,18 +86,20 @@ def StatusChecker(address):
         status = False
         errTime = datetime.datetime.now()
         errName = 'Connection refused. server failed.'
+        print(errName)
         return [errTime, errName]
 
     if str(status_code)[0] == 4 or str(status_code)[0] == 5: #400, 500번대 오류 코드일시 
         status = False 
         errTime = datetime.datetime.now()
         errName = status_code
+    print(errName)
     return [errTime, errName]
 
 
-#켜진 상태, 보낼 시간됐는지 / boolean
-def ONcheckTimeIfMail (): #매주 또는 매일 0:00시인지 확인. 절대적. no param
-    now = datetime.time.now()
+#자정인지
+def ifMidnight():
+    now = datetime.datetime.now()
     midnight_range = []
 
     dt = datetime.datetime.today() - datetime.timedelta(days=1)
@@ -116,8 +121,22 @@ def ONcheckTimeIfMail (): #매주 또는 매일 0:00시인지 확인. 절대적.
     else: return False
 
 
+#켜진 상태, 보낼 시간됐는지 / boolean
+def ONcheckTimeIfMail (): #매주 또는 매일 0:00시인지 확인. 절대적. no param
+    if sendEveryday == True: 
+        if ifMidnight(): return True
+        else: return False
+
+    elif sendEveryweek == True: 
+        if datetime.datetime.now().weekday == 0:
+            if ifMidnight(): return True
+            else: return False
+        else: return False
+
+
 #꺼진 상태, 보낼 시간됐는지 / boolean
 def OFFcheckTimeIfMail (to_compare): #보낸지 10분 이상 지났는지 확인. 상대적
+    global WhenMailLastSent
     if (WhenMailLastSent < (to_compare - datetime.timedelta(minutes=mail_term_when_down))) or WhenMailLastSent == None: #to_compare - now가 10분 이상이거나 처음이거나
         WhenMailLastSent = datetime.datetime.now()
         return True
@@ -132,7 +151,9 @@ def createTitlteNContent(errTime, errName): #and global varible: address, mygit
     if errTime == None and errName == None:
         title = "NOT error message, just notification about " + address
 
-        content = address + " is " + None
+        content = address + " has been connected successfully for " + "minutes" + " to "
+        + ContinousON[0] + ContinousON[1]
+        + 'sincerly ' + 'https://github.com/sungjun4403'
 
 
     else: 
@@ -140,6 +161,8 @@ def createTitlteNContent(errTime, errName): #and global varible: address, mygit
 
         content = address + "failed" + "<br>" 
         + errName + "found at" + errTime + "<br>" 
+        + ContinousOFF[0] + ContinousOFF[1]
+
         + 'failed since' + 'minutes' + "<br>" 
         + 'before failure, your web has been connected' + 'minutes continously' + "<br>" 
         + 'sincerly ' + 'https://github.com/sungjun4403'
@@ -150,27 +173,34 @@ def createTitlteNContent(errTime, errName): #and global varible: address, mygit
 
 
 if __name__ == '__main__': 
-    ContinousON
     alpha = True
 
     while alpha:
         errTime, errName = StatusChecker(address)
 
         if status == True: #웹 정상이고
-            ContinousON = datetime.datetime.now()
+            if WhenMailLastSent < datetime.datetime.now() - datetime.timedelta(seconds=60): 
+                ContinousON[0] = datetime.datetime.now()
+            else: ContinousON[1] = datetime.datetime.now()
+
             if ONcheckTimeIfMail(): #보낼 시간 됐으면 
                 title, content = createTitlteNContent(None, None)   #메일 내용 만들어서 
                 SendGmail(receiver, title, content) #메일 보내기
+                print('mail sent')
             else: pass
 
         elif status == False: #웹 비정상인데    
-            ContinousOFF = datetime.datetime.now()
+            if ContinousON[1] < datetime.datetime.now() - datetime.timedelta(seconds=60):
+                ContinousOFF[0] = datetime.datetime.now()
+            else: ContinousOFF[1] = datetime.datetime.now()
+
             if OFFcheckTimeIfMail(WhenMailLastSent): #10분 됐으면
                 title, content = createTitlteNContent(errTime, errName)    #에러로 메일 내용 만들어서 
                 SendGmail(receiver, title, content) #메일 보내기 
+                print('mail sent')
             else: pass
             
-        else: time.sleep(5); continue
+        else: time.sleep(5); continue #StatusChecker(address) 실패했을 때 
 
         time.sleep(term)
 
