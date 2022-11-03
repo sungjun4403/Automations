@@ -21,9 +21,6 @@ email example:
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from tkinter import N
-from tkinter.messagebox import NO
-from tkinter.tix import Tree
 
 #request check
 from urllib.error import URLError
